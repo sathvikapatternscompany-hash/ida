@@ -1,40 +1,69 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/session.dart';
+import '../../core/providers/schedule_provider.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Mock Data
-    final liveSession = Session(
-      id: '1',
-      title: 'Keynote: Future of Dentistry',
-      speakerName: 'Dr. John Doe',
-      time: '10:00 AM - 11:00 AM',
-      hall: 'Main Hall',
-      description: 'An inspiring talk about the future...',
-    );
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
 
-    final upNextList = [
-      Session(
-        id: '2',
-        title: 'Advanced Root Canal Techniques',
-        speakerName: 'Dr. Jane Smith',
-        time: '11:30 AM - 12:30 PM',
-        hall: 'Hall A',
-        description: 'Deep dive into RCT.',
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  Timer? _timer;
+  Session? _previousLiveSession;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh every minute to check for schedule updates
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      setState(() {
+        _checkForSessionChange();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _checkForSessionChange() {
+    final currentLive = ref.read(currentSessionProvider);
+
+    // If there's a new live session, show notification
+    if (currentLive != null && currentLive != _previousLiveSession) {
+      _showSessionNotification(currentLive);
+      _previousLiveSession = currentLive;
+    }
+  }
+
+  void _showSessionNotification(Session session) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Now Live: ${session.title}'),
+        backgroundColor: Colors.redAccent,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'VIEW',
+          textColor: Colors.white,
+          onPressed: () {
+            // Navigate to schedule if needed
+          },
+        ),
       ),
-      Session(
-        id: '3',
-        title: 'Digital Smile Design',
-        speakerName: 'Dr. Emily Brown',
-        time: '11:30 AM - 12:30 PM',
-        hall: 'Hall B',
-        description: 'Using digital tools for smile design.',
-      ),
-    ];
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Get dynamic schedule data
+    final liveSession = ref.watch(currentSessionProvider);
+    final upNextList = ref.watch(upNextSessionsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -60,16 +89,21 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             _buildSectionTitle(context, 'Live Now'),
             const SizedBox(height: 12),
-            _buildLiveNowCard(context, liveSession),
+            liveSession != null
+                ? _buildLiveNowCard(context, liveSession)
+                : _buildNoLiveSession(context),
             const SizedBox(height: 24),
             _buildSectionTitle(context, 'Up Next'),
             const SizedBox(height: 12),
-            ...upNextList.map(
-              (session) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildSessionCard(context, session),
+            if (upNextList.isEmpty)
+              _buildNoUpcomingSessions(context)
+            else
+              ...upNextList.map(
+                (session) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildSessionCard(context, session),
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -86,6 +120,42 @@ class HomeScreen extends ConsumerWidget {
       style: Theme.of(
         context,
       ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+    );
+  }
+
+  Widget _buildNoLiveSession(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Icon(
+              Icons.schedule,
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+            const SizedBox(width: 12),
+            const Text('No live sessions at the moment'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoUpcomingSessions(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+            const SizedBox(width: 12),
+            const Text('All sessions completed'),
+          ],
+        ),
+      ),
     );
   }
 
@@ -124,9 +194,11 @@ class HomeScreen extends ConsumerWidget {
                   child: Icon(Icons.person, size: 12),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  session.speakerName,
-                  style: Theme.of(context).textTheme.titleMedium,
+                Expanded(
+                  child: Text(
+                    session.speakerName,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
               ],
             ),
