@@ -12,6 +12,9 @@ final scheduleProvider = Provider<Map<String, List<Session>>>((ref) {
         time: '09:00 AM - 10:00 AM',
         hall: 'Lobby',
         description: 'Check-in and delegate kit collection',
+        status: 'Registration',
+        statusMessage:
+            'Please collect your welcome kit from the registration desk.',
       ),
       const Session(
         id: '2',
@@ -33,9 +36,23 @@ final scheduleProvider = Provider<Map<String, List<Session>>>((ref) {
         id: '4',
         title: 'Keynote Lecture – Emerging Trends in Dentistry',
         speakerName: 'Keynote Speaker',
-        time: '11:30 AM - 01:00 PM',
+        time: '11:45 AM - 01:15 PM', // Delayed by 15 mins
         hall: 'Main Hall',
         description: 'Exploring the future of dental practice',
+        status: 'Delayed',
+        statusMessage:
+            'The Keynote session will start 15 mins late due to technical issues.',
+      ),
+      const Session(
+        id: 'lunch',
+        title: 'Lunch Break',
+        speakerName: 'All Delegates',
+        time: '01:15 PM - 02:15 PM', // Rescheduled
+        hall: 'Dining Area',
+        description: 'Networking lunch',
+        status: 'Rescheduled',
+        statusMessage:
+            'Lunch will be served at 1:15 PM instead of 12:30 PM today.',
       ),
       const Session(
         id: '5',
@@ -82,7 +99,7 @@ final currentSessionProvider = Provider<Session?>((ref) {
 
   // Check day1 sessions (January 24, 2026)
   for (final session in schedule['day1']!) {
-    final times = _parseTimeRange(session.time, 1);
+    final times = parseTimeRange(session.time, 1);
     if (times != null) {
       final start = times['start']!;
       final end = times['end']!;
@@ -95,7 +112,7 @@ final currentSessionProvider = Provider<Session?>((ref) {
 
   // Check day2 sessions (January 25, 2026)
   for (final session in schedule['day2']!) {
-    final times = _parseTimeRange(session.time, 2);
+    final times = parseTimeRange(session.time, 2);
     if (times != null) {
       final start = times['start']!;
       final end = times['end']!;
@@ -118,7 +135,7 @@ final upNextSessionsProvider = Provider<List<Session>>((ref) {
 
   // Check day1 sessions (January 24, 2026)
   for (final session in schedule['day1']!) {
-    final times = _parseTimeRange(session.time, 1);
+    final times = parseTimeRange(session.time, 1);
     if (times != null) {
       final start = times['start']!;
 
@@ -130,7 +147,7 @@ final upNextSessionsProvider = Provider<List<Session>>((ref) {
 
   // Check day2 sessions (January 25, 2026)
   for (final session in schedule['day2']!) {
-    final times = _parseTimeRange(session.time, 2);
+    final times = parseTimeRange(session.time, 2);
     if (times != null) {
       final start = times['start']!;
 
@@ -154,13 +171,13 @@ final upNextSessionsProvider = Provider<List<Session>>((ref) {
 });
 
 // Helper function to parse time range
-Map<String, DateTime>? _parseTimeRange(String timeRange, int day) {
+Map<String, DateTime>? parseTimeRange(String timeRange, int day) {
   try {
     final parts = timeRange.split(' - ');
     if (parts.length != 2) return null;
 
-    final start = _parseTime(parts[0].trim(), day);
-    final end = _parseTime(parts[1].trim(), day);
+    final start = parseTime(parts[0].trim(), day);
+    final end = parseTime(parts[1].trim(), day);
 
     if (start == null || end == null) return null;
 
@@ -171,7 +188,7 @@ Map<String, DateTime>? _parseTimeRange(String timeRange, int day) {
 }
 
 // Helper function to parse time string
-DateTime? _parseTime(String timeStr, int day) {
+DateTime? parseTime(String timeStr, int day) {
   try {
     final parts = timeStr.split(' ');
     if (parts.length != 2) return null;
