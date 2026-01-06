@@ -38,6 +38,10 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset('media/logo.jpeg'),
+        ),
         title: const Text('IDA Conference'),
         centerTitle: false,
         actions: [
